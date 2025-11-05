@@ -48,8 +48,6 @@
             const [shareCode, setShareCode] = useState(null);
             const [newShareCode, setNewShareCode] = useState('');
             const [showShareModal, setShowShareModal] = useState(false);
-            const [showJoinModal, setShowJoinModal] = useState(false);
-            const [joinCode, setJoinCode] = useState('');
             const [qrDataUrl, setQrDataUrl] = useState('');
             const [showMigrationAlert, setShowMigrationAlert] = useState(false);
             const dbRefRef = useRef(null);
@@ -289,19 +287,7 @@
                 setShowShareModal(true);
             }
 
-            async function joinWithCode() {
-                if (!joinCode.trim()) {
-                    alert('공유 코드를 입력해주세요!');
-                    return;
-                }
-                
-                const code = joinCode.toUpperCase().trim();
-                setShareCode(code);
-                setJoinCode('');
-                setShowJoinModal(false);
-                connectToFirebase(code);
-                alert(`✅ ${code} 그룹에 입장했습니다!`);
-            }
+
 
             const totalEntries = Object.keys(allData).length;
             const monthCalendar = viewMonth ? getMonthCalendar(viewMonth) : [];
@@ -336,13 +322,6 @@
                                             </div>
                                         </div>
                                     <div className="flex gap-2 flex-wrap">
-                                            <button 
-                                                onClick={() => setShowJoinModal(true)} 
-                                                title="다른 그룹에 입장" 
-                                                className="px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors text-sm font-semibold"
-                                            >
-                                                🚪 입장
-                                            </button>
                                             <button 
                                                 onClick={generateShareUrl} 
                                                 title="공유 링크 생성" 
@@ -502,72 +481,10 @@
                                     )}
                                 </div>
 
-                                {/* Share Code Display */}
-                                {shareCode && (
-                                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg shadow-md p-4 border-2 border-purple-200">
-                                        <div className="text-sm font-semibold text-gray-700 mb-2">📌 현재 공유 코드</div>
-                                        <div className="text-3xl font-bold text-purple-600 text-center mb-3 font-mono tracking-widest">
-                                            {shareCode}
-                                        </div>
-                                        <button
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(shareCode);
-                                                alert('코드가 복사되었습니다!');
-                                            }}
-                                            className="w-full px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 text-sm font-semibold mb-2"
-                                        >
-                                            📋 코드 복사
-                                        </button>
-                                        <p className="text-xs text-gray-600 text-center">
-                                            이 코드를 다른 사람에게 알려주세요<br/>
-                                            <span className="font-semibold">그들이 🚪 입장 버튼으로 코드를 입력하면<br/>같은 문서를 실시간 동기화합니다!</span>
-                                        </p>
-                                    </div>
-                                )}
+
                             </div>
                         </div>
                     </div>
-
-                    {/* Join Modal */}
-                    {showJoinModal && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-md w-full">
-                                <h2 className="text-2xl font-bold mb-4 text-blue-800">🚪 공유 그룹에 입장</h2>
-                                
-                                <p className="text-gray-600 mb-4">
-                                    다른 사람이 준 공유 코드를 입력하면 같은 문서를 볼 수 있습니다.
-                                </p>
-                                
-                                <input
-                                    type="text"
-                                    value={joinCode}
-                                    onChange={(e) => setJoinCode(e.target.value.toUpperCase())}
-                                    onKeyPress={(e) => e.key === 'Enter' && joinWithCode()}
-                                    placeholder="예: ABC12345"
-                                    maxLength="8"
-                                    className="w-full px-4 py-3 border-2 border-blue-300 rounded-lg focus:border-blue-500 focus:outline-none text-lg font-mono text-center mb-4 tracking-widest"
-                                />
-                                
-                                <div className="flex gap-3">
-                                    <button
-                                        onClick={joinWithCode}
-                                        className="flex-1 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 font-semibold"
-                                    >
-                                        입장하기
-                                    </button>
-                                    <button
-                                        onClick={() => {
-                                            setShowJoinModal(false);
-                                            setJoinCode('');
-                                        }}
-                                        className="flex-1 px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 font-semibold"
-                                    >
-                                        취소
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                    )}
 
                     {/* Share Modal */}
                     {showShareModal && (
