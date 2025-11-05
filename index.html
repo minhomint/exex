@@ -269,7 +269,9 @@
             async function generateShareUrl() {
                 if (!shareCode) return;
                 
-                const url = `${window.location.origin}${window.location.pathname}?share=${shareCode}`;
+                // 현재 페이지의 실제 URL에서 share 파라미터 추가
+                const currentUrl = window.location.href.split('?')[0]; // 기존 파라미터 제거
+                const url = `${currentUrl}?share=${shareCode}`;
                 
                 // QR 코드 생성
                 try {
