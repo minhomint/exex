@@ -90,7 +90,7 @@
 
             // 데이터 변경시 자동 저장
             useEffect(() => {
-                if (currentDate && (currentText || currentMemo)) {
+                if (currentDate) {
                     saveCurrentDate();
                 }
             }, [currentText, currentMemo]);
