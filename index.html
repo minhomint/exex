@@ -8,7 +8,6 @@
     <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
     <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/qrious@4.0.2/dist/qrious.min.js"></script>
     <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
@@ -36,39 +35,24 @@
         }
         const database = firebase.database();
         
+        // 고정된 공유 ID (모든 사용자가 같은 데이터)
+        const FIXED_SHARE_CODE = "manna_shared_data";
+        
         function MannaTracker() {
             const [allData, setAllData] = useState({});
             const [currentDate, setCurrentDate] = useState('');
             const [currentText, setCurrentText] = useState('');
             const [currentMemo, setCurrentMemo] = useState('');
-            const [copied, setCopied] = useState(false);
             const [viewMonth, setViewMonth] = useState('');
             const [lastSaved, setLastSaved] = useState(null);
             const [firebaseStatus, setFirebaseStatus] = useState('Firebase 연결 중...');
-            const [shareCode, setShareCode] = useState(null);
-            const [newShareCode, setNewShareCode] = useState('');
-            const [showShareModal, setShowShareModal] = useState(false);
-            const [qrDataUrl, setQrDataUrl] = useState('');
-            const [showMigrationAlert, setShowMigrationAlert] = useState(false);
             const dbRefRef = useRef(null);
 
             const dayNames = ['일', '월', '화', '수', '목', '금', '토'];
 
-            // Firebase 초기 연결 및 공유 코드 처리
+            // Firebase 초기 연결
             useEffect(() => {
-                const urlParams = new URLSearchParams(window.location.search);
-                const codeParam = urlParams.get('share');
-                
-                if (codeParam) {
-                    // URL에서 공유 코드 받음
-                    setShareCode(codeParam);
-                    connectToFirebase(codeParam);
-                } else {
-                    // 새로운 공유 코드 생성
-                    const newCode = generateShareCode();
-                    setShareCode(newCode);
-                    connectToFirebase(newCode);
-                }
+                connectToFirebase();
 
                 const today = new Date();
                 const todayStr = formatDate(today);
@@ -76,13 +60,8 @@
                 setViewMonth(todayStr.substring(0, 7));
             }, []);
 
-            function generateShareCode() {
-                return Math.random().toString(36).substring(2, 10).toUpperCase();
-            }
-
-            function connectToFirebase(code) {
-                // 라디오와 호환되는 경로 사용
-                const dbRef = database.ref(`manna_data/${code}`);
+            function connectToFirebase() {
+                const dbRef = database.ref(`manna_data/${FIXED_SHARE_CODE}`);
                 dbRefRef.current = dbRef;
 
                 // 실시간 리스너 설정
@@ -92,9 +71,9 @@
                         if (data && data.allData) {
                             setAllData(data.allData);
                             setLastSaved(new Date(data.lastSaved));
-                            setFirebaseStatus('✅ Firebase 연결 성공 (실시간 동기화 중)');
+                            setFirebaseStatus('✅ Firebase 실시간 동기화 중');
                         } else {
-                            setFirebaseStatus('✅ Firebase 연결 성공');
+                            setFirebaseStatus('✅ Firebase 연결 완료');
                         }
                     } catch (error) {
                         console.error('데이터 로드 오류:', error);
@@ -266,31 +245,6 @@
                 URL.revokeObjectURL(url);
             }
 
-            async function generateShareUrl() {
-                if (!shareCode) return;
-                
-                // 현재 페이지의 실제 URL에서 share 파라미터 추가
-                const currentUrl = window.location.href.split('?')[0]; // 기존 파라미터 제거
-                const url = `${currentUrl}?share=${shareCode}`;
-                
-                // QR 코드 생성
-                try {
-                    const qr = new QRious({
-                        value: url,
-                        size: 256,
-                        level: 'M'
-                    });
-                    setQrDataUrl(qr.toDataURL());
-                } catch (qrErr) {
-                    console.error('QR 생성 실패:', qrErr);
-                    setQrDataUrl('');
-                }
-                
-                setShowShareModal(true);
-            }
-
-
-
             const totalEntries = Object.keys(allData).length;
             const monthCalendar = viewMonth ? getMonthCalendar(viewMonth) : [];
             const monthStats = {
@@ -316,21 +270,14 @@
                                                     총 {totalEntries}일 기록
                                                     {lastSaved && (
                                                         <span className="ml-2 text-green-600">
-                                                            ✓ 실시간 동기화 중
+                                                            ✓ 실시간 동기화
                                                         </span>
                                                     )}
                                                 </p>
                                                 <p className="text-xs text-green-600 mt-1">{firebaseStatus}</p>
                                             </div>
                                         </div>
-                                    <div className="flex gap-2 flex-wrap">
-                                            <button 
-                                                onClick={generateShareUrl} 
-                                                title="공유 링크 생성" 
-                                                className="px-3 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600 transition-colors text-sm font-semibold"
-                                            >
-                                                🔗 공유
-                                            </button>
+                                        <div className="flex gap-2 flex-wrap">
                                             <button 
                                                 onClick={exportCombinedText} 
                                                 title="텍스트로 내보내기" 
@@ -482,87 +429,9 @@
                                         </div>
                                     )}
                                 </div>
-
-
                             </div>
                         </div>
                     </div>
-
-                    {/* Share Modal */}
-                    {showShareModal && (
-                        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-                            <div className="bg-white rounded-lg p-6 max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-                                <h2 className="text-2xl font-bold mb-4 text-amber-800">🔗 데이터 공유</h2>
-                                
-                                <div className="mb-6 p-4 bg-purple-50 rounded-lg border-2 border-purple-300">
-                                    <h3 className="text-lg font-semibold mb-3 text-purple-800">📌 방법 1: 공유 코드</h3>
-                                    <div className="text-center mb-3">
-                                        <div className="text-3xl font-bold text-purple-600 font-mono tracking-widest mb-2">{shareCode}</div>
-                                        <button
-                                            onClick={() => {
-                                                navigator.clipboard.writeText(shareCode);
-                                                alert('코드가 복사되었습니다!');
-                                            }}
-                                            className="px-4 py-2 bg-purple-500 text-white rounded-lg hover:bg-purple-600"
-                                        >
-                                            📋 코드 복사
-                                        </button>
-                                    </div>
-                                    <p className="text-sm text-purple-700 text-center">
-                                        이 코드를 카톡/메일로 보내면<br/>
-                                        상대방이 🚪 입장 버튼으로 입력하면 끝!
-                                    </p>
-                                </div>
-                                
-                                {qrDataUrl ? (
-                                    <div className="mb-6">
-                                        <h3 className="text-lg font-semibold mb-3">📱 방법 2: QR 코드</h3>
-                                        <div className="flex flex-col items-center bg-gray-50 p-4 rounded-lg">
-                                            <img src={qrDataUrl} alt="QR Code" className="mb-3" />
-                                            <p className="text-sm text-gray-600 text-center">
-                                                다른 디바이스에서 스캔하면 자동 입장!
-                                            </p>
-                                        </div>
-                                    </div>
-                                ) : null}
-                                
-                                <div className="mb-6">
-                                    <h3 className="text-lg font-semibold mb-3">🔗 방법 3: 링크</h3>
-                                    <p className="text-gray-600 mb-3 text-sm">
-                                        이 링크를 카톡, 메일 등으로 보내세요
-                                    </p>
-                                    <div className="bg-gray-100 p-3 rounded-lg mb-3 break-all text-xs max-h-20 overflow-y-auto">
-                                        {`${window.location.origin}${window.location.pathname}?share=${shareCode}`}
-                                    </div>
-                                    <button
-                                        onClick={() => {
-                                            const url = `${window.location.origin}${window.location.pathname}?share=${shareCode}`;
-                                            navigator.clipboard.writeText(url);
-                                            alert('링크가 복사되었습니다!');
-                                        }}
-                                        className="w-full px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 mb-3"
-                                    >
-                                        📋 링크 복사
-                                    </button>
-                                </div>
-                                
-                                <div className="mb-6 p-4 bg-green-50 rounded-lg border-2 border-green-200">
-                                    <h3 className="text-lg font-semibold mb-2 text-green-800">✨ 실시간 동기화</h3>
-                                    <p className="text-sm text-green-700">
-                                        공유 코드를 받은 모든 사람이 같은 문서를 봅니다!<br/>
-                                        한 사람이 수정하면 다른 사람들도 즉시 볼 수 있습니다.
-                                    </p>
-                                </div>
-                                
-                                <button
-                                    onClick={() => setShowShareModal(false)}
-                                    className="w-full px-4 py-2 bg-gray-300 text-gray-800 rounded-lg hover:bg-gray-400 font-semibold"
-                                >
-                                    닫기
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             );
         }
